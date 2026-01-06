@@ -1,7 +1,9 @@
 # Rotate-Donut
 A rotating Donut in Terminal
-## Execute
+
+## Build
 - gcc -o donut donut.c -lm
+## Execute
 - ./donut
 
 ## Reference
