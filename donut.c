@@ -20,23 +20,27 @@ const float K1 = 20;
 const uint16_t screen_width = 80;
 const uint16_t screen_height = 30;
 
+static const char luminance[] = ".,-~:;=!*#$@";
+
 void render_frame(float A, float B) {
   char output[screen_width * screen_height];
   float zbuffer[screen_width * screen_height];
-  memset(output, ' ', screen_width * screen_height);
-  memset(zbuffer, 0, screen_width * screen_height * 4);
+  const int lum_count = (int)(sizeof(luminance) - 1);
+  float sinA = sinf(A);
+  float sinB = sinf(B);
+  float cosA = cosf(A);
+  float cosB = cosf(B);
+
+  memset(output, ' ', sizeof(output));
+  memset(zbuffer, 0, sizeof(zbuffer));
   // theta goes around the cross-sectional circle of a torus
   for (float theta=0; theta < 2*PI; theta += theta_spacing) {
     for(float phi=0; phi < 2*PI; phi += phi_spacing) {
       // precompute
-      float sinA = sin(A);
-      float sinB = sin(B);
-      float cosA = cos(A);
-      float cosB = cos(B);
-      float sinphi = sin(phi);
-      float sintheta = sin(theta);
-      float costheta = cos(theta);
-      float cosphi = cos(phi);
+      float sinphi = sinf(phi);
+      float sintheta = sinf(theta);
+      float costheta = cosf(theta);
+      float cosphi = cosf(phi);
     
       // the x,y coordinate of the circle, before revolving (factored
       // out of the above equations)
@@ -61,13 +65,18 @@ void render_frame(float A, float B) {
       float L = cosphi*costheta*sinB - cosA*costheta*sinphi -
         sinA*sintheta + cosB*(cosA*sintheta - costheta*sinA*sinphi);
       // L ranges from -sqrt(2) to +sqrt(2).  If it's < 0, the surface
-      int lum_index = L * 8;
+      int lum_index = (int)(L * 8);
+      if (lum_index < 0) {
+        lum_index = 0;
+      } else if (lum_index >= lum_count) {
+        lum_index = lum_count - 1;
+      }
       if (screen_height > yp && yp > 0 && xp > 0 && screen_width > xp && ooz > zbuffer[i]) {
         zbuffer[i] = ooz;
-          // luminance_index is now in the range 0..11 (8*sqrt(2) = 11.3)
-          // now we lookup the character corresponding to the
-          // luminance and plot it in our output:
-          output[i] = ".,-~:;=!*#$@"[lum_index > 0 ? lum_index : 0];
+        // luminance_index is now in the range 0..11 (8*sqrt(2) = 11.3)
+        // now we lookup the character corresponding to the
+        // luminance and plot it in our output:
+        output[i] = luminance[lum_index];
       }
     }
   }
@@ -80,16 +89,17 @@ void render_frame(float A, float B) {
     putchar(k % screen_width ? output[k] : 10);
   }
 }
-int main() {
-    float A =
-        0, B = 0, i, j, zbuffer[screen_width * screen_height];
-    printf("/x1b[2J]");
-    int back = 0;
-    for (;;) {
-        render_frame(A,B);
-        A += 0.04;
-        B += 0.02;
-        usleep(15000);
-    }
-    return 0;
+
+int main(void) {
+  float A = 0;
+  float B = 0;
+
+  printf("\x1b[2J");
+  for (;;) {
+    render_frame(A, B);
+    A += 0.04f;
+    B += 0.02f;
+    usleep(15000);
+  }
+  return 0;
 }
